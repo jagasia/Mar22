@@ -1,0 +1,329 @@
+Hibernate:
+	persist java entities in a datasource
+	hibernate.cfg.xml
+	entity.hbm.xml
+
+	map entities to the db relations using Annotations
+		map columns, identifier, transient
+		map the types
+
+	Criteria
+		filter
+		sort
+		group and aggregation
+
+
+Hibernate Query Language:
+--------------------------
+	What is hibernate query language.	How is it different from SQL.
+	yes. it is different from SQL
+
+	In SQL language, we query the tables
+		we mention, table name, alias name, column name and use SQL language functions
+
+	In HQL language, we query the entities
+		we mention, class name, object name, properties' name, etc.
+
+example:
+	SELECT * FROM EMPLOYEE;			--SQL query
+
+	this will not work in HQL
+	
+	SELECT e FROM Employee e		--HQL query
+
+Here, Employee is the class. e is the object of Employee
+	* is not allowed. but "e" is an object of Employee class, means, entire row is represented as object
+
+	in jdbc, we retrieve a row, and assign them to each properties of the entity class object.	This is done by hibernate for us
+
+
+Task:
+	Create a maven project and 
+		i) add ojdbc, hibernate core dependencies
+		ii) add hibernate.cfg.xml to the src/main/java
+		iii) add an entity class to the model package 
+		iv) in App.java, main method,
+			obtain the session
+		v) Create a query to display all the entities
+
+
+--------------------
+First we learnt JDBC and wrote SQL queries
+Then we learnt Hibernate and did the CRUD operations without queries
+Now again we are learning HQL and write queries.
+Why?
+
+	for simple, usual or routine, common programming tasks, we make Hibernate to do that
+	for advanced, business specific, application specific, constraints or criteria, we need to use queries
+
+
+In SALES TABLE,
+
+InvoiceNumber
+InvoiceDate
+ProductId
+CustomerId
+Quantity
+TotalAmount
+
+here, invoice Date should be taken from system
+total amount should be calculated
+
+if everything is available in entity, then "persist" or "save" can be executed.
+
+OTher wise, we may have to write some code to generate the date,  (sysdate is simple but sometimes, expiry date should be calculated based on formula)
+so we need some space to do that
+
+Delete based on id is simple
+but delete based on complex criteria or non key attribute, there is no hibernate method to do that. 
+	We have to write query
+
+Update salary only if the outcome is average salary does not go beyond X. 
+How to do?  use query
+
+Remember CRUD operations we did.
+they were based on primary key only
+
+Find customer by customerId
+	simple.
+
+Find customer by city
+	there is no ready made method available
+
+	we have to write Criteria QUery or hibernate query
+
+
+Main reason why HQL is introduced is when we give peculiar conditions.
+
+for insert statement, we do not give any condition.
+
+HQL for insert is available	for
+	multi row insert
+	
+--------------------------
+Task:
+	create a Dao class with
+	CREATE
+	READ
+	READ(ID)
+	UPDATE
+	DELETE
+
+	methods.
+Except insert,
+	other methods should be done using HQL
+
+Test the dao methods in App.java main method
+
+----------------------------------------------------
+Lets see what is "Named query"
+	we can store a query in the Entity class itself with a name
+
+
+@Entity
+@Table(name = "CUSTOMER")
+@NamedQueries({
+	@NamedQuery(name = "findByCity", query = "FROM Customer c WHERE c.city=:city"),
+	@NamedQuery(name="findByOccupation", query = "FROM Customer c WHERE c.occupation=:occupation")
+})
+public class Customer {
+
+
+
+
+
+    	Configuration config=new Configuration();
+    	config.configure("hibernate.cfg.xml");
+    	config.addAnnotatedClass(Customer.class);
+    	SessionFactory sf = config.buildSessionFactory();
+    	Session session = sf.openSession();
+    	Query query = session.getNamedQuery("findByCity");
+    	query.setString("city", "Delhi");
+    	List<Customer> result = query.list();
+    	for(Customer c : result)
+    		System.out.println(c);
+
+Task:
+	1) create a named query in the entity class
+	2) get named query and execute the same
+
+Associate class has a byte array
+	how we map byte array to Blob?
+
+
+
+1) Hibernate relationships
+2) Hibernate cache
+3) Loading strategies
+	Lazy
+	Eager
+4) Logging
+
+
+Hibernate relationships:
+-------------------------
+	Relationships like
+		OneToMany
+		ManyToOne
+		ManyToMany
+
+	can be implemented using mapping xml file or annotations
+
+	Lets see an example
+
+-------------------------------------
+Task:
+	Create college class:
+	id, name, university (object)
+
+	Create university class:
+	id, name, List<College> college list
+
+use hibernate relationship annotations
+	
+	and test the code by adding few colleges and universities
+
+
+@Entity
+public class University {
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+	private String name;
+	private String location;
+	//One University has Many Colleges			SOmething to Many	will crteate a new table. to prevent that use mappedBy
+	@OneToMany(mappedBy = "university")
+	private List<College> collegeList;
+
+
+@Entity
+public class College {
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+	private String name;
+	//One College belong to One university
+	@ManyToOne(targetEntity = University.class)
+	private University university;
+
+
+Did you notice the difference between LAZY and EAGER Mode?
+
+	Lazy is the default mode.
+		1) 1 query executed to obtain a department from db using ID
+		2) Even when unversity.getCollegeList() was executed, the second query was not executed.
+		3) only when we access the collegeList, the second query was executed.
+
+	Eager mode retrieves all related data initially.
+		there is no second query when we access collegeList.
+
+Task:
+	read an university by ID. and display the university.
+	read the same univsersity using same ID and display the university.
+
+	Check how many times, the select query is executed.
+
+
+Task:
+	read an university by ID. and display the university.
+	read the same univsersity using same ID and display the university.
+	Between these 2 reads, change the name of university in "Sql developer" and commit.
+
+	Now that between 2 reads, the value is different in the db, 
+	check how many times the select query is executed.
+
+
+
+This is because, of "Cache"
+	Hibernate cache remembers the records and when we do operations involving same query, it does not access the database.
+	It works using the cache data.
+
+	This is Hibernate Level 1 cache
+
+
+----------
+dependencies:
+--------------
+  <dependency>
+			<groupId>com.oracle.ojdbc</groupId>
+			<artifactId>ojdbc8</artifactId>
+			<version>19.3.0.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>4.0.1.Final</version>
+		</dependency>
+		
+		        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>4.2.0.Final</version>
+        </dependency>        
+        <dependency>
+            <groupId>org.hibernate.common</groupId>
+            <artifactId>hibernate-commons-annotations</artifactId>
+            <version>4.0.1.Final</version>
+            <classifier>tests</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.javax.persistence</groupId>
+            <artifactId>hibernate-jpa-2.0-api</artifactId>
+            <version>1.0.1.Final</version>
+        </dependency>      
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>4.0.1.Final</version>
+        </dependency>       
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>1.0.0.GA</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.6.4</version>
+        </dependency>
+ <!--        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            <version>3.1.0.CR2</version>
+        </dependency> -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.6.4</version>
+        </dependency>
+        		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+
+-----------------------------------------
+#log4j.rootLogger=debug, stdout, R
+#
+#log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+#log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+#
+## Pattern to output the caller's file name and line number.
+#log4j.appender.stdout.layout.ConversionPattern=  - %m%n
+#
+#log4j.appender.R=org.apache.log4j.RollingFileAppender
+#log4j.appender.R.File=example.log
+#
+#log4j.appender.R.MaxFileSize=100KB
+## Keep one backup file
+#log4j.appender.R.MaxBackupIndex=1
+#
+#log4j.appender.R.layout=org.apache.log4j.PatternLayout
+#log4j.appender.R.layout.ConversionPattern= %c - %m%n
+
+
+---------------------------------------------Break 16:03 to 16:18------------------------------
